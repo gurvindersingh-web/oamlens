@@ -3,6 +3,7 @@
 A desktop magnifier lens for [Omarchy](https://omarchy.org/) / Hyprland, packaged as an Omarchy shell plugin.
 
 It uses [hyprmag](https://github.com/SIMULATAN/hyprmag), a wlroots-compatible Wayland screen magnifier. Toggle the lens, move your mouse to inspect details, scroll to resize the lens, and press **Esc** to close it.
+<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/7fa1ae1e-f146-4829-8138-9b36bb7b63d4" />
 
 ## Features
 
