@@ -3,7 +3,6 @@
 A desktop magnifier lens for [Omarchy](https://omarchy.org/) / Hyprland, packaged as an Omarchy shell plugin.
 
 It uses [hyprmag](https://github.com/SIMULATAN/hyprmag), a wlroots-compatible Wayland screen magnifier. Toggle the lens, move your mouse to inspect details, scroll to resize the lens, and press **Esc** to close it.
-<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/7fa1ae1e-f146-4829-8138-9b36bb7b63d4" />
 
 ## Features
 
@@ -22,17 +21,12 @@ It uses [hyprmag](https://github.com/SIMULATAN/hyprmag), a wlroots-compatible Wa
 
 ### Installing hyprmag
 
-On Arch-based systems, `hyprmag` is commonly available from the AUR:
+`hyprmag` must be installed separately (this plugin does **not** install or manage system packages).
 
-```bash
-# with yay
-yay -S hyprmag-git
+- On Arch-based systems, install the `hyprmag-git` package from the AUR using your preferred AUR helper, **or**
+- build and install it from source by following the [hyprmag build instructions](https://github.com/SIMULATAN/hyprmag#building).
 
-# with paru
-paru -S hyprmag-git
-```
-
-You can also build it from source following the [hyprmag README](https://github.com/SIMULATAN/hyprmag#building).
+After `hyprmag` is available in your `PATH` (or at `~/.local/bin/hyprmag`), press **Super+Z** to launch the lens.
 
 ## Installation
 
@@ -114,9 +108,15 @@ rm -f ~/.local/bin/zoom-lens-launch ~/.config/hypr/zoom-lens.conf
 - `setup.sh` installs `zoom-lens-launch` (a wrapper around `hyprmag`), creates a default config, registers the keybinding where possible, and shows a one-time keybinding notification.
 - `hyprmag-launch` reads your config and launches `hyprmag` with safe defaults.
 
-## Safety & Privacy
+## Setup scope (transparency)
 
-This plugin runs local commands only (`hyprmag`, `notify-send`/`hyprctl notify`, and small shell setup steps). It does **not** collect, store, or transmit personal data. Review the scripts before installing, as Omarchy plugins run unsandboxed.
+When loaded/enabled, the bundled `setup.sh` runs with normal user permissions to:
+- install/copy `zoom-lens-launch` to `~/.local/bin/`
+- create `~/.config/hyprmag/config.conf` **only if it does not already exist**
+- add a **Super+Z** binding conservatively (it skips if a matching magnifier/zoom-lens bind is already present), by writing `~/.config/hypr/zoom-lens.conf` and/or appending a clearly marked block to `~/.config/hypr/bindings.lua` when applicable
+- show a one-time local keybinding notification
+
+It does **not** install, upgrade, or remove system packages; it does **not** use `sudo`/privilege escalation; and it does **not** collect, store, or transmit personal data. Review the scripts before installing, as Omarchy plugins run unsandboxed.
 
 ## License
 
