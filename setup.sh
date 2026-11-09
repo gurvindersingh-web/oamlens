@@ -103,7 +103,7 @@ if [[ ! -f "$MARKER" ]]; then
   if [[ "$has_hyprmag" -eq 1 ]]; then
     notify "Zoom Lens ready" "Press Super+Z to toggle the magnifier. Esc closes it. Scroll to resize. Config: ~/.config/hyprmag/config.conf"
   else
-    notify "Zoom Lens installed" "Press Super+Z after installing hyprmag (AUR: hyprmag-git). Esc closes the lens. Config: ~/.config/hyprmag/config.conf"
+    notify "Zoom Lens installed" "Press Super+Z after installing hyprmag (see plugin README). Esc closes the lens. Config: ~/.config/hyprmag/config.conf"
   fi
   : > "$MARKER"
 fi
