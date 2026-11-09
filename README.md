@@ -116,7 +116,7 @@ When loaded/enabled, the bundled `setup.sh` runs with normal user permissions to
 - add a **Super+Z** binding conservatively (it skips if a matching magnifier/zoom-lens bind is already present), by writing `~/.config/hypr/zoom-lens.conf` and/or appending a clearly marked block to `~/.config/hypr/bindings.lua` when applicable
 - show a one-time local keybinding notification
 
-It does **not** install, upgrade, or remove system packages; it does **not** use `sudo`/privilege escalation; and it does **not** collect, store, or transmit personal data. Review the scripts before installing, as Omarchy plugins run unsandboxed.
+It does **not** install, upgrade, or remove system packages; it does **not** request elevated/root privileges; and it does **not** collect, store, or transmit personal data. Review the scripts before installing, as Omarchy plugins run unsandboxed.
 
 ## License
 
