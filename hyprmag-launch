@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# Zoom Lens launcher for Omarchy (hyprmag wrapper)
+# Reads settings from ${XDG_CONFIG_HOME:-$HOME/.config}/hyprmag/config.conf
+set -euo pipefail
+
+config="${XDG_CONFIG_HOME:-$HOME/.config}/hyprmag/config.conf"
+radius="100"
+scale="2.5"
+
+trim() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
+if [[ -f "$config" ]]; then
+  while IFS='=' read -r key value || [[ -n "${key:-}" ]]; do
+    key="$(trim "${key:-}")"
+    value="$(trim "${value:-}")"
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    case "$key" in
+      radius) radius="$value" ;;
+      scale) scale="$value" ;;
+    esac
+  done < "$config"
+fi
+
+# Fall back to safe defaults if values are invalid.
+[[ "$radius" =~ ^[0-9]+$ ]] || radius="100"
+[[ "$scale" =~ ^[0-9]+([.][0-9]+)?$ ]] || scale="2.5"
+
+bin=""
+if command -v hyprmag >/dev/null 2>&1; then
+  bin="$(command -v hyprmag)"
+elif [[ -x "$HOME/.local/bin/hyprmag" ]]; then
+  bin="$HOME/.local/bin/hyprmag"
+fi
+
+if [[ -z "$bin" ]]; then
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a "Zoom Lens" "hyprmag not found" "Install hyprmag (e.g. from AUR: hyprmag-git), then press Super+Z again." || true
+  fi
+  echo "zoom-lens: hyprmag not found in PATH" >&2
+  exit 127
+fi
+
+if [[ "${1:-}" == "--print" ]]; then
+  printf '%s -r %s -s %s\n' "$bin" "$radius" "$scale"
+  exit 0
+fi
+
+exec "$bin" -r "$radius" -s "$scale" "$@"
