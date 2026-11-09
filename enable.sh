@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Zoom Lens (zoom-lens.magnifier) - user-level setup helper.
+# Zoom Lens (zoom-lens.magnifier) - user-level enable helper.
 #
 # Scope (runs with normal user permissions, idempotent):
 # - copies the bundled launcher to ~/.local/bin/zoom-lens-launch
@@ -16,7 +16,8 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-zoom-lens"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hyprmag"
 HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 BIN_DIR="$HOME/.local/bin"
-MARKER="$STATE_DIR/setup-notified"
+MARKER="$STATE_DIR/enable-notified"
+LEGACY_MARKER="$STATE_DIR/setup-notified"
 
 mkdir -p "$STATE_DIR" "$CONFIG_DIR" "$BIN_DIR"
 
@@ -98,14 +99,15 @@ if command -v hyprmag >/dev/null 2>&1 || [[ -x "$HOME/.local/bin/hyprmag" ]]; th
   has_hyprmag=1
 fi
 
-# 6) One-time keybinding popup/notification after install/setup.
-if [[ ! -f "$MARKER" ]]; then
+# 6) One-time keybinding popup/notification after enable.
+if [[ ! -f "$MARKER" && ! -f "$LEGACY_MARKER" ]]; then
   if [[ "$has_hyprmag" -eq 1 ]]; then
     notify "Zoom Lens ready" "Press Super+Z to toggle the magnifier. Esc closes it. Scroll to resize. Config: ~/.config/hyprmag/config.conf"
   else
-    notify "Zoom Lens installed" "Press Super+Z after installing hyprmag (see plugin README). Esc closes the lens. Config: ~/.config/hyprmag/config.conf"
+    notify "Zoom Lens enabled" "Press Super+Z after installing hyprmag (see plugin README). Esc closes the lens. Config: ~/.config/hyprmag/config.conf"
   fi
   : > "$MARKER"
 fi
+[[ -f "$LEGACY_MARKER" && ! -f "$MARKER" ]] && : > "$MARKER" || true
 
 exit 0

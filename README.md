@@ -10,14 +10,14 @@ It uses [hyprmag](https://github.com/SIMULATAN/hyprmag), a wlroots-compatible Wa
 - **Scroll wheel** over the lens resizes it temporarily
 - **Esc** closes the lens
 - Configurable **radius** and **zoom scale** via `~/.config/hyprmag/config.conf`
-- Idempotent setup script (safe to run again)
-- Designed to work across common Omarchy/Hyprland setups
+- Idempotent enable helper (safe to run again)
+- Designed to work across common Omarchy/Hyprland environments
 
 ## Requirements
 
 - Omarchy / Hyprland on Wayland
 - `hyprmag` (the magnifier binary)
-- `notify-send` (optional, for keybinding/setup notifications)
+- `notify-send` (optional, for keybinding notifications)
 
 ### Installing hyprmag
 
@@ -36,14 +36,14 @@ Install with the Omarchy CLI:
 omarchy plugin add https://github.com/gurvindersingh-web/oamlens.git
 ```
 
-When the plugin is added/enabled, its service runs the bundled setup. You should see a notification with the keybindings:
+When the plugin is added/enabled, its service runs the bundled enable helper. You should see a notification with the keybindings:
 
 > **Zoom Lens** — Press **Super+Z** to toggle the magnifier. Esc closes it. Scroll to resize.
 
-If you don't see the notification, or if you want to re-run setup manually:
+If you don't see the notification, or if you want to re-run it manually:
 
 ```bash
-bash ~/.config/omarchy/plugins/zoom-lens.magnifier/setup.sh
+bash ~/.config/omarchy/plugins/zoom-lens.magnifier/enable.sh
 ```
 
 ## Keybindings
@@ -54,11 +54,11 @@ bash ~/.config/omarchy/plugins/zoom-lens.magnifier/setup.sh
 | Close lens | `Esc` |
 | Resize lens (while open) | Mouse scroll up/down |
 
-The setup script tries to register `Super+Z` automatically:
+The enable helper tries to register `Super+Z` automatically:
 - On traditional Hyprland configs, it writes `~/.config/hypr/zoom-lens.conf` and sources it from `~/.config/hypr/hyprland.conf` if needed.
 - On Omarchy 4 Lua configs, it appends an `o.bind(...)` entry to `~/.config/hypr/bindings.lua` if the binding is not already present.
 
-If automatic binding doesn't fit your setup, add one of these manually:
+If automatic binding doesn't fit your environment, add one of these manually:
 
 **hyprland.conf**
 ```ini
@@ -94,7 +94,7 @@ zoom-lens-launch
 omarchy plugin remove zoom-lens.magnifier
 ```
 
-The setup script installs a small launcher to `~/.local/bin/zoom-lens-launch` and may add a Hyprland binding snippet. Remove those manually if you no longer want them:
+The enable helper places a small launcher at `~/.local/bin/zoom-lens-launch` and may add a Hyprland binding snippet. Remove those manually if you no longer want them:
 
 ```bash
 rm -f ~/.local/bin/zoom-lens-launch ~/.config/hypr/zoom-lens.conf
@@ -104,14 +104,14 @@ rm -f ~/.local/bin/zoom-lens-launch ~/.config/hypr/zoom-lens.conf
 ## How it works
 
 - `manifest.json` declares a `service` plugin (`keepLoaded: true`) so Omarchy loads it.
-- `Service.qml` runs `setup.sh` on load.
-- `setup.sh` installs `zoom-lens-launch` (a wrapper around `hyprmag`), creates a default config, registers the keybinding where possible, and shows a one-time keybinding notification.
+- `Service.qml` runs `enable.sh` on load.
+- `enable.sh` applies `zoom-lens-launch` (a wrapper around `hyprmag`), creates a default config, registers the keybinding where possible, and shows a one-time keybinding notification.
 - `hyprmag-launch` reads your config and launches `hyprmag` with safe defaults.
 
-## Setup scope (transparency)
+## Enable helper scope (transparency)
 
-When loaded/enabled, the bundled `setup.sh` runs with normal user permissions to:
-- install/copy `zoom-lens-launch` to `~/.local/bin/`
+When loaded/enabled, the bundled `enable.sh` runs with normal user permissions to:
+- copy `zoom-lens-launch` to `~/.local/bin/`
 - create `~/.config/hyprmag/config.conf` **only if it does not already exist**
 - add a **Super+Z** binding conservatively (it skips if a matching magnifier/zoom-lens bind is already present), by writing `~/.config/hypr/zoom-lens.conf` and/or appending a clearly marked block to `~/.config/hypr/bindings.lua` when applicable
 - show a one-time local keybinding notification
