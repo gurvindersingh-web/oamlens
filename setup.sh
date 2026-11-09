@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
-# Idempotent setup for the Zoom Lens Omarchy plugin.
-# Installs the launcher, creates a default config, adds a Hyprland keybinding
-# when possible, and shows a keybinding notification.
+# Zoom Lens (zoom-lens.magnifier) - user-level setup helper.
+#
+# Scope (runs with normal user permissions, idempotent):
+# - copies the bundled launcher to ~/.local/bin/zoom-lens-launch
+# - creates ~/.config/hyprmag/config.conf only if missing
+# - adds a Super+Z binding conservatively (skips existing magnifier/zoom-lens binds)
+# - shows a one-time local keybinding notification
+#
+# It does NOT install/upgrade/remove system packages and does NOT request
+# elevated/root privileges. Review before use (Omarchy plugins run unsandboxed).
 set -u
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
