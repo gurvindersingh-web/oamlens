@@ -2,14 +2,13 @@
 # Zoom Lens (zoom-lens.magnifier) - user-level enable helper.
 #
 # Scope (runs with normal user permissions, idempotent):
-# - builds hyprmag from source into ~/.local/bin if not already installed
 # - copies the bundled launcher to ~/.local/bin/zoom-lens-launch
 # - creates ~/.config/hyprmag/config.conf only if missing
 # - adds a Super+Z binding conservatively (skips existing magnifier/zoom-lens binds)
 # - shows a one-time local keybinding notification
 #
-# It does NOT install/upgrade/remove system packages and does NOT request
-# elevated/root privileges. Review before use (Omarchy plugins run unsandboxed).
+# It does NOT download remote code, does NOT install/upgrade system packages,
+# and does NOT request elevated/root privileges. Review before use.
 set -u
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,11 +16,19 @@ STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy-zoom-lens"
 CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hyprmag"
 HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 BIN_DIR="$HOME/.local/bin"
-SRC_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/omarchy-zoom-lens/hyprmag"
 MARKER="$STATE_DIR/enable-notified"
 LEGACY_MARKER="$STATE_DIR/setup-notified"
+LOCK_FILE="$STATE_DIR/enable.lock"
 
 mkdir -p "$STATE_DIR" "$CONFIG_DIR" "$BIN_DIR"
+
+# Cross-process setup lock: serialize concurrent runs, exit cleanly if another instance holds lock.
+if command -v flock >/dev/null 2>&1; then
+  exec 200>"$LOCK_FILE"
+  if ! flock -n 200; then
+    exit 0
+  fi
+fi
 
 notify() {
   local title="$1" body="${2:-}"
@@ -31,58 +38,6 @@ notify() {
     hyprctl notify -1 8000 "rgb(a6e3a1)" "$title: $body" >/dev/null 2>&1 || true
   fi
 }
-
-# 0) Build and install hyprmag from source if not already available.
-#    All build dependencies (cmake, wayland, cairo, pango, etc.) are standard
-#    Omarchy/Hyprland libraries already present on the system.
-ensure_hyprmag() {
-  # Already installed — nothing to do.
-  if command -v hyprmag >/dev/null 2>&1 || [[ -x "$BIN_DIR/hyprmag" ]]; then
-    return 0
-  fi
-
-  # Need cmake and a C++ compiler to build.
-  if ! command -v cmake >/dev/null 2>&1; then
-    notify "Zoom Lens" "Cannot auto-build hyprmag: cmake not found. Install cmake, then re-enable the plugin."
-    return 1
-  fi
-
-  notify "Zoom Lens" "Building hyprmag from source (one-time setup)…"
-
-  local repo="https://github.com/SIMULATAN/hyprmag.git"
-  if [[ -d "$SRC_DIR/.git" ]]; then
-    git -C "$SRC_DIR" pull --ff-only 2>/dev/null || true
-  else
-    rm -rf "$SRC_DIR"
-    mkdir -p "$(dirname "$SRC_DIR")"
-    if ! git clone --depth 1 "$repo" "$SRC_DIR" 2>&1; then
-      notify "Zoom Lens" "Failed to clone hyprmag. Check your network connection."
-      return 1
-    fi
-  fi
-
-  mkdir -p "$SRC_DIR/build"
-  if ! cmake -S "$SRC_DIR" -B "$SRC_DIR/build" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$HOME/.local" 2>&1; then
-    notify "Zoom Lens" "hyprmag cmake configure failed. Check build dependencies."
-    return 1
-  fi
-
-  if ! cmake --build "$SRC_DIR/build" -j"$(nproc)" 2>&1; then
-    notify "Zoom Lens" "hyprmag build failed. Check build dependencies."
-    return 1
-  fi
-
-  install -m 0755 "$SRC_DIR/build/hyprmag" "$BIN_DIR/hyprmag"
-  notify "Zoom Lens" "hyprmag built and installed to ~/.local/bin/hyprmag"
-  return 0
-}
-
-ensure_hyprmag
-has_hyprmag=$?
-# Recheck after build attempt.
-if command -v hyprmag >/dev/null 2>&1 || [[ -x "$BIN_DIR/hyprmag" ]]; then
-  has_hyprmag=0
-fi
 
 # 1) Install launcher into ~/.local/bin (no personal paths inside the script).
 if [[ -f "$PLUGIN_DIR/hyprmag-launch" ]]; then
@@ -147,12 +102,18 @@ LUA
 add_hyprland_conf_bind
 add_lua_bind
 
-# 5) One-time keybinding popup/notification after enable.
+# 5) Check for hyprmag binary and offer guidance.
+has_hyprmag=0
+if command -v hyprmag >/dev/null 2>&1 || [[ -x "$BIN_DIR/hyprmag" ]]; then
+  has_hyprmag=1
+fi
+
+# 6) One-time keybinding popup/notification after enable.
 if [[ ! -f "$MARKER" && ! -f "$LEGACY_MARKER" ]]; then
-  if [[ "$has_hyprmag" -eq 0 ]]; then
+  if [[ "$has_hyprmag" -eq 1 ]]; then
     notify "Zoom Lens ready" "Press Super+Z to toggle the magnifier. Esc closes it. Scroll to resize. Config: ~/.config/hyprmag/config.conf"
   else
-    notify "Zoom Lens setup incomplete" "hyprmag could not be built automatically. See the plugin README for manual instructions."
+    notify "Zoom Lens enabled" "Press Super+Z after installing hyprmag (see plugin README). Esc closes the lens. Config: ~/.config/hyprmag/config.conf"
   fi
   : > "$MARKER"
 fi

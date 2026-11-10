@@ -20,13 +20,33 @@ Item {
   Process {
     id: enableProc
     command: ["bash", root.pluginPath("enable.sh")]
+    running: false
+
     stdout: StdioCollector { }
     stderr: StdioCollector { }
+
+    onExited: (exitCode, exitStatus) => {
+      setupWatchdog.running = false;
+    }
+  }
+
+  // Bounded watchdog for the setup helper to ensure deterministic completion.
+  Timer {
+    id: setupWatchdog
+    interval: 8000
+    repeat: false
+    running: false
+    onTriggered: {
+      if (enableProc.running) {
+        enableProc.running = false;
+      }
+    }
   }
 
   Component.onCompleted: {
     if (!root.initStarted) {
       root.initStarted = true;
+      setupWatchdog.running = true;
       enableProc.running = true;
     }
   }
