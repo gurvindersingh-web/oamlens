@@ -22,7 +22,7 @@ LOCK_FILE="$STATE_DIR/enable.lock"
 
 mkdir -p "$STATE_DIR" "$CONFIG_DIR" "$BIN_DIR"
 
-# Cross-process setup lock: serialize concurrent runs, exit cleanly if another instance holds lock.
+# Cross-process setup lock: serialize concurrent runs
 if command -v flock >/dev/null 2>&1; then
   exec 200>"$LOCK_FILE"
   if ! flock -n 200; then
@@ -30,18 +30,19 @@ if command -v flock >/dev/null 2>&1; then
   fi
   # Keep lock held for process lifetime; lock released on process exit/group termination
 else
-  # Fallback if flock is unavailable
-  PID_LOCK="$STATE_DIR/enable.pid"
-  if [[ -f "$PID_LOCK" ]]; then
-    _oldpid="$(cat "$PID_LOCK" 2>/dev/null || true)"
-    if [[ -n "$_oldpid" ]] && kill -0 "$_oldpid" 2>/dev/null; then
-      exit 0
-    fi
-    rm -f "$PID_LOCK" 2>/dev/null || true
-  fi
-  echo $$ > "$PID_LOCK"
-  trap 'rm -f "$PID_LOCK" 2>/dev/null || true' EXIT INT TERM HUP
+  notify "Zoom Lens" "flock not available; cannot safely serialize setup. Please install util-linux."
+  exit 1
 fi
+
+# Write PID for supervisor (process group/session leader)
+PIDFILE="$STATE_DIR/enable.pid"
+# Try to get session leader PID
+LEADER_PID="$(ps -o sid= -p $$ 2>/dev/null | tr -d ' ')"
+if [[ -z "$LEADER_PID" ]]; then
+  LEADER_PID="$$"
+fi
+echo "$LEADER_PID" > "$PIDFILE"
+trap 'rm -f "$PIDFILE" 2>/dev/null || true' EXIT INT TERM HUP
 
 notify() {
   local title="$1" body="${2:-}"

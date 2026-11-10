@@ -12,7 +12,7 @@ Item {
   height: 0
 
   property bool initStarted: false
-  property string lockPath: ""
+  property string pidFile: Quickshell.env("HOME") + "/.local/state/omarchy-zoom-lens/enable.pid"
 
   function pluginPath(path) {
     return Qt.resolvedUrl(path).toString().replace("file://", "")
@@ -20,15 +20,13 @@ Item {
 
   Process {
     id: enableProc
-    command: ["setsid", "bash", root.pluginPath("enable.sh")]
+    command: ["setsid", "sh", "-c", "bash '" + root.pluginPath("enable.sh") + "' >/dev/null 2>&1"]
     running: false
-
-    stdout: StdioCollector { }
-    stderr: StdioCollector { }
 
     onExited: (exitCode, exitStatus) => {
       setupWatchdog.running = false;
       killGraceTimer.running = false;
+      Quickshell.execDetached(["sh", "-c", "rm -f '" + root.pidFile + "' 2>/dev/null"]);
     }
 
     onRunningChanged: {
@@ -46,14 +44,9 @@ Item {
     repeat: false
     running: false
     onTriggered: {
-      if (enableProc.running && enableProc.pid) {
-        // Send SIGTERM to the entire process group
-        Quickshell.execDetached(["sh", "-c", "kill -TERM -" + enableProc.pid + " 2>/dev/null || kill -TERM " + enableProc.pid + " 2>/dev/null"]);
+      if (enableProc.running) {
+        Quickshell.execDetached(["sh", "-c", "P=$(cat '" + root.pidFile + "' 2>/dev/null); if [ -n \"$P\" ]; then kill -TERM -\"$P\" 2>/dev/null || kill -TERM \"$P\" 2>/dev/null; fi"]);
         killGraceTimer.running = true;
-      } else if (enableProc.running) {
-        // Fallback if PID not available
-        Quickshell.execDetached(["sh", "-c", "pkill -TERM -f 'zoom-lens.magnifier/enable.sh' 2>/dev/null || pkill -TERM -f 'enable.sh.*zoom' 2>/dev/null"]);
-        enableProc.running = false;
       }
     }
   }
@@ -65,12 +58,10 @@ Item {
     repeat: false
     running: false
     onTriggered: {
-      if (enableProc.running && enableProc.pid) {
-        Quickshell.execDetached(["sh", "-c", "kill -KILL -" + enableProc.pid + " 2>/dev/null || kill -KILL " + enableProc.pid + " 2>/dev/null"]);
-      } else if (enableProc.running) {
-        Quickshell.execDetached(["sh", "-c", "pkill -KILL -f 'zoom-lens.magnifier/enable.sh' 2>/dev/null"]);
+      if (enableProc.running) {
+        Quickshell.execDetached(["sh", "-c", "P=$(cat '" + root.pidFile + "' 2>/dev/null); if [ -n \"$P\" ]; then kill -KILL -\"$P\" 2>/dev/null || kill -KILL \"$P\" 2>/dev/null; fi; rm -f '" + root.pidFile + "' 2>/dev/null"]);
+        enableProc.running = false;
       }
-      enableProc.running = false;
     }
   }
 
