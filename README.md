@@ -17,17 +17,22 @@ wlroots-compatible Wayland screen magnifier. Toggle the lens, move your mouse to
 ## Requirements
 
 - Omarchy / Hyprland on Wayland
-- `hyprmag` (the magnifier binary)
+- Standard build tools (`cmake`, `gcc`/`g++`) — present on most Omarchy installs
 - `notify-send` (optional, for keybinding notifications)
 
-### Installing hyprmag
+### hyprmag (auto-built)
 
-`hyprmag` must be installed separately (this plugin does **not** install or manage system packages).
+The plugin automatically builds [hyprmag](https://github.com/SIMULATAN/hyprmag) from source into `~/.local/bin/` on first enable. All runtime libraries it needs (wayland, cairo, pango, etc.) ship with every Omarchy/Hyprland installation.
 
-- On Arch-based systems, install the `hyprmag-git` package from the AUR using your preferred AUR helper, **or**
-- build and install it from source by following the [hyprmag build instructions](https://github.com/SIMULATAN/hyprmag#building).
+If auto-build fails (e.g. `cmake` is missing), install it with:
 
-After `hyprmag` is available in your `PATH` (or at `~/.local/bin/hyprmag`), press **Super+Z** to launch the lens.
+```bash
+sudo pacman -S cmake
+omarchy plugin remove zoom-lens.magnifier
+omarchy plugin add https://github.com/gurvindersingh-web/oamlens.git --enable
+```
+
+Alternatively, install `hyprmag` manually from the AUR (`hyprmag-git`) or [build from source](https://github.com/SIMULATAN/hyprmag#building).
 
 ## Installation
 
@@ -106,12 +111,13 @@ rm -f ~/.local/bin/zoom-lens-launch ~/.config/hypr/zoom-lens.conf
 
 - `manifest.json` declares a `service` plugin (`keepLoaded: true`) so Omarchy loads it.
 - `Service.qml` runs `enable.sh` on load.
-- `enable.sh` applies `zoom-lens-launch` (a wrapper around `hyprmag`), creates a default config, registers the keybinding where possible, and shows a one-time keybinding notification.
+- `enable.sh` builds `hyprmag` from source if not already installed, applies `zoom-lens-launch` (a wrapper around `hyprmag`), creates a default config, registers the keybinding where possible, and shows a one-time keybinding notification.
 - `hyprmag-launch` reads your config and launches `hyprmag` with safe defaults.
 
 ## Enable helper scope (transparency)
 
 When loaded/enabled, the bundled `enable.sh` runs with normal user permissions to:
+- clone and build `hyprmag` from source into `~/.local/bin/` **only if not already installed** (source cached in `~/.local/share/omarchy-zoom-lens/hyprmag/`)
 - copy `zoom-lens-launch` to `~/.local/bin/`
 - create `~/.config/hyprmag/config.conf` **only if it does not already exist**
 - add a **Super+Z** binding conservatively (it skips if a matching magnifier/zoom-lens bind is already present), by writing `~/.config/hypr/zoom-lens.conf` and/or appending a clearly marked block to `~/.config/hypr/bindings.lua` when applicable
