@@ -28,6 +28,19 @@ if command -v flock >/dev/null 2>&1; then
   if ! flock -n 200; then
     exit 0
   fi
+  # Keep lock held for process lifetime; lock released on process exit/group termination
+else
+  # Fallback if flock is unavailable
+  PID_LOCK="$STATE_DIR/enable.pid"
+  if [[ -f "$PID_LOCK" ]]; then
+    _oldpid="$(cat "$PID_LOCK" 2>/dev/null || true)"
+    if [[ -n "$_oldpid" ]] && kill -0 "$_oldpid" 2>/dev/null; then
+      exit 0
+    fi
+    rm -f "$PID_LOCK" 2>/dev/null || true
+  fi
+  echo $$ > "$PID_LOCK"
+  trap 'rm -f "$PID_LOCK" 2>/dev/null || true' EXIT INT TERM HUP
 fi
 
 notify() {

@@ -12,6 +12,7 @@ Item {
   height: 0
 
   property bool initStarted: false
+  property string lockPath: ""
 
   function pluginPath(path) {
     return Qt.resolvedUrl(path).toString().replace("file://", "")
@@ -19,7 +20,7 @@ Item {
 
   Process {
     id: enableProc
-    command: ["bash", root.pluginPath("enable.sh")]
+    command: ["setsid", "bash", root.pluginPath("enable.sh")]
     running: false
 
     stdout: StdioCollector { }
@@ -27,6 +28,14 @@ Item {
 
     onExited: (exitCode, exitStatus) => {
       setupWatchdog.running = false;
+      killGraceTimer.running = false;
+    }
+
+    onRunningChanged: {
+      if (!running) {
+        setupWatchdog.running = false;
+        killGraceTimer.running = false;
+      }
     }
   }
 
@@ -37,9 +46,31 @@ Item {
     repeat: false
     running: false
     onTriggered: {
-      if (enableProc.running) {
+      if (enableProc.running && enableProc.pid) {
+        // Send SIGTERM to the entire process group
+        Quickshell.execDetached(["sh", "-c", "kill -TERM -" + enableProc.pid + " 2>/dev/null || kill -TERM " + enableProc.pid + " 2>/dev/null"]);
+        killGraceTimer.running = true;
+      } else if (enableProc.running) {
+        // Fallback if PID not available
+        Quickshell.execDetached(["sh", "-c", "pkill -TERM -f 'zoom-lens.magnifier/enable.sh' 2>/dev/null || pkill -TERM -f 'enable.sh.*zoom' 2>/dev/null"]);
         enableProc.running = false;
       }
+    }
+  }
+
+  // Grace period before escalating to SIGKILL
+  Timer {
+    id: killGraceTimer
+    interval: 1000
+    repeat: false
+    running: false
+    onTriggered: {
+      if (enableProc.running && enableProc.pid) {
+        Quickshell.execDetached(["sh", "-c", "kill -KILL -" + enableProc.pid + " 2>/dev/null || kill -KILL " + enableProc.pid + " 2>/dev/null"]);
+      } else if (enableProc.running) {
+        Quickshell.execDetached(["sh", "-c", "pkill -KILL -f 'zoom-lens.magnifier/enable.sh' 2>/dev/null"]);
+      }
+      enableProc.running = false;
     }
   }
 
