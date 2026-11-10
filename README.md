@@ -24,15 +24,9 @@ wlroots-compatible Wayland screen magnifier. Toggle the lens, move your mouse to
 
 The plugin automatically builds [hyprmag](https://github.com/SIMULATAN/hyprmag) from source into `~/.local/bin/` on first enable. All runtime libraries it needs (wayland, cairo, pango, etc.) ship with every Omarchy/Hyprland installation.
 
-If auto-build fails (e.g. `cmake` is missing), install it with:
+If auto-build fails (e.g. `cmake` is missing), ensure standard build tools are present, then re-enable the plugin.
 
-```bash
-sudo pacman -S cmake
-omarchy plugin remove zoom-lens.magnifier
-omarchy plugin add https://github.com/gurvindersingh-web/oamlens.git --enable
-```
-
-Alternatively, install `hyprmag` manually from the AUR (`hyprmag-git`) or [build from source](https://github.com/SIMULATAN/hyprmag#building).
+Alternatively, `hyprmag` can be installed ahead of time from the AUR (`hyprmag-git`) or [built from source](https://github.com/SIMULATAN/hyprmag#building).
 
 ## Installation
 
