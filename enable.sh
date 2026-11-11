@@ -9,6 +9,10 @@
 #
 # It does NOT download remote code, does NOT install/upgrade system packages,
 # and does NOT request elevated/root privileges. Review before use.
+#
+# The helper is a pure setup worker: when invoked directly it re-execs
+# supervise.sh, which serializes runs, enforces the deadline and records the
+# settlement in the state directory.
 set -u
 
 PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,31 +22,19 @@ HYPR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr"
 BIN_DIR="$HOME/.local/bin"
 MARKER="$STATE_DIR/enable-notified"
 LEGACY_MARKER="$STATE_DIR/setup-notified"
-LOCK_FILE="$STATE_DIR/enable.lock"
+
+# Every invocation goes through supervise.sh, which holds the cross-process
+# lock, runs this helper in its own bounded process group and records one
+# settlement. The supervisor re-runs this helper with ZOOM_LENS_SUPERVISED=1.
+if [[ "${ZOOM_LENS_SUPERVISED:-0}" != "1" ]]; then
+  if [[ ! -f "$PLUGIN_DIR/supervise.sh" ]]; then
+    echo "supervise.sh is missing; cannot run Zoom Lens setup safely" >&2
+    exit 1
+  fi
+  exec bash "$PLUGIN_DIR/supervise.sh"
+fi
 
 mkdir -p "$STATE_DIR" "$CONFIG_DIR" "$BIN_DIR"
-
-# Cross-process setup lock: serialize concurrent runs
-if command -v flock >/dev/null 2>&1; then
-  exec 200>"$LOCK_FILE"
-  if ! flock -n 200; then
-    exit 0
-  fi
-  # Keep lock held for process lifetime; lock released on process exit/group termination
-else
-  notify "Zoom Lens" "flock not available; cannot safely serialize setup. Please install util-linux."
-  exit 1
-fi
-
-# Write PID for supervisor (process group/session leader)
-PIDFILE="$STATE_DIR/enable.pid"
-# Try to get session leader PID
-LEADER_PID="$(ps -o sid= -p $$ 2>/dev/null | tr -d ' ')"
-if [[ -z "$LEADER_PID" ]]; then
-  LEADER_PID="$$"
-fi
-echo "$LEADER_PID" > "$PIDFILE"
-trap 'rm -f "$PIDFILE" 2>/dev/null || true' EXIT INT TERM HUP
 
 notify() {
   local title="$1" body="${2:-}"
